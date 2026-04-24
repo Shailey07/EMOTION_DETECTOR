@@ -1,6 +1,5 @@
 """
 Face Detection Module
-Made by: Shailendra Meghwal
 """
 
 import cv2
@@ -23,6 +22,7 @@ class FaceDetector:
     
     def detect_faces(self, frame, method='default'):
         """
+    
         Detect faces in frame
         Returns: List of (x, y, w, h)
         """

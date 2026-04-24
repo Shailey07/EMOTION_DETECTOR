@@ -1,6 +1,5 @@
 """
 Image Preprocessing Module
-Made by: Shailendra Meghwal
 """
 
 import cv2

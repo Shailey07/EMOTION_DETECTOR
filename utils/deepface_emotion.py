@@ -1,6 +1,5 @@
 """
 Real Emotion Detection using DeepFace
-Made by: Shailendra Meghwal
 This actually works!
 """
 

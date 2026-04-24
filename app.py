@@ -1,218 +1,218 @@
 """
-Human Emotion Detection - Complete Working System
-Made by: Shailendra Meghwal
-Live Face Detection + Emotion Recognition
+Human Emotion Detection System - Complete Backend
+Made by: WINTER WOLF 🐺
+Supports: Live Camera + Image Upload
 """
 
-from flask import Flask, render_template, Response, jsonify
+from flask import Flask, render_template, Response, request, jsonify
+from flask_cors import CORS
 import cv2
 import numpy as np
+import base64
 import os
 import json
 from datetime import datetime
-import base64
-from PIL import Image
-import io
+import traceback
 
 app = Flask(__name__)
+CORS(app)
 
-# Global variables
+# Configuration
+UPLOAD_FOLDER = 'uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs('model', exist_ok=True)
+
+# Global camera object
 camera = None
-face_cascade = None
-emotion_running = True
 
-# Emotion labels with emojis
-EMOTIONS = {
-    'happy': ['😊', 'Happy', '#4CAF50'],
-    'sad': ['😢', 'Sad', '#2196F3'],
-    'angry': ['😠', 'Angry', '#f44336'],
-    'surprise': ['😲', 'Surprise', '#FF9800'],
-    'fear': ['😨', 'Fear', '#9C27B0'],
-    'disgust': ['🤢', 'Disgust', '#795548'],
-    'neutral': ['😐', 'Neutral', '#607D8B']
+# Try to import DeepFace (accurate emotion detection)
+try:
+    from deepface import DeepFace
+    DEEPFACE_AVAILABLE = True
+    print("✅ DeepFace loaded successfully!")
+except ImportError:
+    DEEPFACE_AVAILABLE = False
+    print("⚠️ DeepFace not installed. Install with: pip install deepface")
+    print("⚠️ Falling back to OpenCV basic detection")
+
+# Load face detector
+face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+
+# Emotion mapping with emojis
+emotion_emojis = {
+    'happy': '😊',
+    'sad': '😢',
+    'angry': '😠',
+    'surprise': '😲',
+    'fear': '😨',
+    'disgust': '🤢',
+    'neutral': '😐'
 }
 
-# Simple rule-based emotion detection from facial features
+# Fallback simple detection (when DeepFace not available)
 def detect_emotion_simple(face_roi):
-    """
-    Simple emotion detection based on facial features
-    Real implementation would use deep learning
-    """
     if face_roi is None or face_roi.size == 0:
         return 'neutral', 0.5
-    
-    # Convert to grayscale
     gray = cv2.cvtColor(face_roi, cv2.COLOR_BGR2GRAY)
-    
-    # Calculate basic features
-    height, width = gray.shape
-    
-    # Divide face into regions
-    top_third = gray[0:height//3, :]
-    middle_third = gray[height//3:2*height//3, :]
-    bottom_third = gray[2*height//3:, :]
-    
-    # Calculate brightness of different regions
-    top_brightness = np.mean(top_third)
-    middle_brightness = np.mean(middle_third)
-    bottom_brightness = np.mean(bottom_third)
-    
-    # Simple emotion rules
-    # Smile detection (mouth region brighter)
-    if bottom_brightness > middle_brightness + 20:
-        return 'happy', 0.7 + (bottom_brightness - middle_brightness) / 100
-    
-    # Sad detection (eyes and mouth darker)
-    elif top_brightness > bottom_brightness + 15:
-        return 'sad', 0.65
-    
-    # Surprise detection (whole face brighter)
-    elif np.mean(gray) > 150:
-        return 'surprise', 0.6
-    
-    # Angry detection (furrowed brow - top part darker)
-    elif top_brightness < middle_brightness - 15:
-        return 'angry', 0.6
-    
-    # Fear detection (uneven brightness)
-    elif abs(top_brightness - bottom_brightness) > 30:
-        return 'fear', 0.55
-    
+    avg_brightness = np.mean(gray)
+    if avg_brightness > 150:
+        return 'happy', 0.6
+    elif avg_brightness < 80:
+        return 'sad', 0.6
+    elif avg_brightness > 130 and avg_brightness < 150:
+        return 'surprise', 0.5
     else:
+        return 'neutral', 0.7
+
+def detect_emotion_deepface(face_roi):
+    """Detect emotion using DeepFace (accurate)"""
+    if face_roi is None or face_roi.size == 0:
+        return 'neutral', 0.5
+    temp_path = 'temp_face.jpg'
+    cv2.imwrite(temp_path, face_roi)
+    try:
+        result = DeepFace.analyze(
+            img_path=temp_path,
+            actions=['emotion'],
+            enforce_detection=False,
+            silent=True
+        )
+        emotion = result[0]['dominant_emotion']
+        confidence = result[0]['emotion'][emotion] / 100
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        return emotion.lower(), confidence
+    except Exception as e:
+        print(f"DeepFace error: {e}")
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
         return 'neutral', 0.5
 
-def init_camera():
-    """Initialize camera and face detector"""
-    global camera, face_cascade
-    
-    try:
-        camera = cv2.VideoCapture(0)
-        if not camera.isOpened():
-            print("❌ Camera not found!")
-            return False
-        
-        # Set camera properties
-        camera.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-        camera.set(cv2.CAP_PROP_FPS, 30)
-        
-        # Load face detector
-        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-        
-        print("✅ Camera and face detector initialized!")
-        return True
-    except Exception as e:
-        print(f"❌ Error initializing camera: {e}")
-        return False
+def detect_emotion(face_roi):
+    """Main emotion detection function"""
+    if DEEPFACE_AVAILABLE:
+        return detect_emotion_deepface(face_roi)
+    else:
+        return detect_emotion_simple(face_roi)
 
 def generate_frames():
-    """Generate video frames with face detection and emotion recognition"""
-    global camera, face_cascade, emotion_running
-    
-    if not init_camera():
+    """Live video streaming with emotion detection"""
+    global camera
+    camera = cv2.VideoCapture(0)
+    if not camera.isOpened():
+        print("❌ Camera not accessible")
         return
-    
-    frame_count = 0
-    
-    while emotion_running:
+    while True:
         success, frame = camera.read()
         if not success:
-            print("❌ Failed to read frame")
             break
-        
-        frame_count += 1
-        
-        # Convert to grayscale for face detection
+        frame = cv2.flip(frame, 1)
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        
-        # Detect faces
-        faces = face_cascade.detectMultiScale(
-            gray,
-            scaleFactor=1.1,
-            minNeighbors=5,
-            minSize=(60, 60),
-            flags=cv2.CASCADE_SCALE_IMAGE
-        )
-        
-        # Process each detected face
+        faces = face_cascade.detectMultiScale(gray, 1.1, 5, minSize=(60, 60))
         for (x, y, w, h) in faces:
-            # Extract face region
             face_roi = frame[y:y+h, x:x+w]
-            
-            # Detect emotion
-            emotion_key, confidence = detect_emotion_simple(face_roi)
-            emotion_info = EMOTIONS.get(emotion_key, EMOTIONS['neutral'])
-            
-            emoji, emotion_name, color = emotion_info
-            
-            # Draw rectangle around face
-            cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 3)
-            
-            # Create label
-            label = f"{emoji} {emotion_name} ({confidence*100:.1f}%)"
-            
-            # Add background for text
-            (label_w, label_h), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)
-            cv2.rectangle(frame, (x, y-label_h-10), (x+label_w, y), (0, 255, 0), -1)
-            
-            # Add text
-            cv2.putText(frame, label, (x, y-5), 
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
-            
-            # Add confidence bar
+            emotion, confidence = detect_emotion(face_roi)
+            emoji = emotion_emojis.get(emotion, '😐')
+            if emotion == 'happy':
+                color = (0, 255, 0)
+            elif emotion == 'sad':
+                color = (255, 0, 0)
+            elif emotion == 'angry':
+                color = (0, 0, 255)
+            elif emotion == 'surprise':
+                color = (0, 255, 255)
+            else:
+                color = (128, 128, 128)
+            cv2.rectangle(frame, (x, y), (x+w, y+h), color, 3)
+            label = f"{emoji} {emotion.upper()} ({confidence*100:.1f}%)"
+            cv2.putText(frame, label, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
             bar_width = int(w * confidence)
-            cv2.rectangle(frame, (x, y+h+5), (x+bar_width, y+h+15), (0, 255, 0), -1)
+            cv2.rectangle(frame, (x, y+h+5), (x+bar_width, y+h+15), color, -1)
             cv2.rectangle(frame, (x, y+h+5), (x+w, y+h+15), (255, 255, 255), 1)
-        
-        # Add info text
-        cv2.putText(frame, f"Faces Detected: {len(faces)}", (10, 30),
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-        cv2.putText(frame, "Press 'q' to quit", (10, 60),
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-        
-        # Encode frame
-        ret, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
-        frame = buffer.tobytes()
-        
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
-    
-    if camera:
-        camera.release()
+        cv2.putText(frame, f"Faces: {len(faces)}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+        ret, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+        frame_bytes = buffer.tobytes()
+        yield (b'--frame\r\nb' Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n\r\n')
+    camera.release()
 
 @app.route('/')
 def index():
-    """Home page"""
     return render_template('index.html')
 
 @app.route('/video_feed')
 def video_feed():
-    """Video streaming route"""
-    return Response(generate_frames(),
-                   mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
-@app.route('/stop')
-def stop():
-    """Stop camera"""
-    global emotion_running, camera
-    emotion_running = False
+@app.route('/detect', methods=['POST'])
+def detect():
+    """Handle image upload and return emotion detection result"""
+    try:
+        data = request.json
+        image_data = data['image']
+        if ',' in image_data:
+            image_data = image_data.split(',')[1]
+        img_bytes = base64.b64decode(image_data)
+        np_arr = np.frombuffer(img_bytes, np.uint8)
+        frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        if frame is None:
+            return jsonify({'success': False, 'error': 'Invalid image'})
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        faces = face_cascade.detectMultiScale(gray, 1.1, 5, minSize=(60, 60))
+        results = []
+        for (x, y, w, h) in faces:
+            face_roi = frame[y:y+h, x:x+w]
+            emotion, confidence = detect_emotion(face_roi)
+            emoji = emotion_emojis.get(emotion, '😐')
+            results.append({
+                'emotion': f"{emoji} {emotion.capitalize()}",
+                'base_emotion': emotion,
+                'confidence': float(confidence),
+                'bbox': [int(x), int(y), int(w), int(h)]
+            })
+            # Save to history (in-memory)
+            save_history(emotion, confidence)
+        if not results:
+            return jsonify({'success': False, 'error': 'No face detected in uploaded image'})
+        return jsonify({'success': True, 'results': results})
+    except Exception as e:
+        print(f"Detection error: {traceback.format_exc()}")
+        return jsonify({'success': False, 'error': str(e)})
+
+# In-memory history storage
+detection_history = []
+
+def save_history(emotion, confidence):
+    detection_history.append({
+        'timestamp': datetime.now().isoformat(),
+        'emotion': emotion.capitalize(),
+        'confidence': confidence
+    })
+    if len(detection_history) > 50:
+        detection_history.pop(0)
+
+@app.route('/history', methods=['GET'])
+def get_history():
+    return jsonify({'success': True, 'history': detection_history})
+
+@app.route('/stop_camera')
+def stop_camera():
+    global camera
     if camera:
         camera.release()
+        camera = None
     return jsonify({'status': 'stopped'})
 
 if __name__ == '__main__':
     print("\n" + "="*60)
     print("🎭 HUMAN EMOTION DETECTION SYSTEM")
-    print("👨‍💻 Created by: Shailendra Meghwal")
+    print("🐺 Created by WINTER WOLF")
     print("="*60)
-    print("\n✨ Features:")
-    print("📹 Real-time face detection")
-    print("🎭 7 Emotion recognition")
-    print("📊 Confidence scoring")
-    print("🟢 Green box around face")
-    print("\n🚀 Starting server...")
-    print("📍 Open browser: http://127.0.0.1:5000")
+    if DEEPFACE_AVAILABLE:
+        print("✅ DeepFace: ACTIVE (accurate detection)")
+    else:
+        print("⚠️ DeepFace: NOT INSTALLED (using basic detection)")
+        print("💡 For better accuracy, run: pip install deepface")
+    print("\n🚀 Server starting...")
+    print("📍 Open: http://127.0.0.1:5000")
     print("🔴 Press Ctrl+C to stop\n")
-    print("="*60 + "\n")
-    
     app.run(debug=True, host='127.0.0.1', port=5000, threaded=True)
