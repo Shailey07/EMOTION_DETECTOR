@@ -132,7 +132,9 @@ def generate_frames():
         cv2.putText(frame, f"Faces: {len(faces)}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
         ret, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
         frame_bytes = buffer.tobytes()
-        yield (b'--frame\r\nb' Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n\r\n')
+        # ✅ FIXED LINE (NO SYNTAX ERROR)
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n\r\n')
     camera.release()
 
 @app.route('/')
