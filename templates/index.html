@@ -3,21 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Human Emotion Detection | AI Face Recognition</title>
+    <title>WINTER WOLF | Human Emotion Detection</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             min-height: 100vh;
             padding: 20px;
         }
-
         .container {
             max-width: 1300px;
             margin: 0 auto;
@@ -25,28 +23,16 @@
             border-radius: 30px;
             overflow: hidden;
             box-shadow: 0 25px 50px rgba(0,0,0,0.3);
-            backdrop-filter: blur(10px);
         }
-
-        /* Header */
         .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 30px;
             text-align: center;
         }
-
         .header h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            letter-spacing: -0.5px;
+            font-size: 2rem;
         }
-
-        .header p {
-            font-size: 1.1rem;
-            opacity: 0.9;
-        }
-
         .creator {
             margin-top: 15px;
             font-size: 0.9rem;
@@ -55,442 +41,297 @@
             padding: 5px 15px;
             border-radius: 50px;
         }
-
-        /* Main Content */
         .main-content {
             padding: 30px;
         }
-
-        /* Mode Selector */
         .mode-tabs {
             display: flex;
             gap: 15px;
             justify-content: center;
             margin-bottom: 30px;
-            flex-wrap: wrap;
         }
-
         .mode-btn {
             padding: 12px 30px;
-            font-size: 1rem;
-            font-weight: 600;
+            background: #f0f0f0;
             border: none;
             border-radius: 50px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            background: #f0f0f0;
-            color: #333;
         }
-
         .mode-btn.active {
             background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
-            box-shadow: 0 5px 15px rgba(102,126,234,0.4);
         }
-
-        .mode-btn:hover {
-            transform: translateY(-3px);
+        .mode-panel {
+            display: none;
         }
-
-        /* Video Section */
-        .video-card {
+        .mode-panel.active {
+            display: block;
+        }
+        .webcam-container {
             background: #000;
             border-radius: 20px;
             overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             position: relative;
         }
-
-        #video-feed {
+        #local-video {
             width: 100%;
             height: auto;
             display: block;
         }
-
-        .live-badge {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background: #ff4444;
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .action-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            padding: 12px 30px;
+            border: none;
+            border-radius: 50px;
             color: white;
-            padding: 5px 15px;
-            border-radius: 30px;
-            font-size: 0.8rem;
-            font-weight: bold;
-            animation: pulse 1.5s infinite;
+            cursor: pointer;
         }
-
-        @keyframes pulse {
-            0% { opacity: 1; transform: scale(1);}
-            50% { opacity: 0.6; transform: scale(1.05);}
-            100% { opacity: 1; transform: scale(1);}
-        }
-
-        /* Upload Section */
         .upload-area {
             border: 3px dashed #667eea;
             border-radius: 20px;
             padding: 50px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.3s;
-            background: #faf9ff;
         }
-
-        .upload-area:hover {
-            background: #f0eefe;
-            border-color: #764ba2;
-        }
-
-        .upload-icon {
-            font-size: 4rem;
-            margin-bottom: 15px;
-        }
-
-        .preview-container {
-            text-align: center;
-            margin-top: 20px;
-        }
-
-        #preview-img {
-            max-width: 100%;
-            max-height: 400px;
-            border-radius: 15px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-        }
-
-        .action-btn {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            border: none;
-            padding: 12px 35px;
-            font-size: 1rem;
-            font-weight: bold;
-            border-radius: 50px;
-            cursor: pointer;
-            margin-top: 20px;
-            transition: 0.3s;
-        }
-
-        .action-btn:hover {
-            transform: scale(1.02);
-            box-shadow: 0 8px 20px rgba(102,126,234,0.4);
-        }
-
-        /* Results Panel */
         .results-panel {
             margin-top: 30px;
             background: #f8f9ff;
             border-radius: 20px;
             padding: 20px;
         }
-
         .result-card {
             background: white;
-            border-radius: 15px;
             padding: 20px;
-            margin-bottom: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border-radius: 15px;
+            text-align: center;
         }
-
         .result-emotion {
-            font-size: 1.4rem;
+            font-size: 1.8rem;
             font-weight: bold;
         }
-
-        .result-confidence {
-            font-size: 1.2rem;
-            color: #28a745;
-        }
-
-        /* History */
-        .history-list {
-            max-height: 250px;
-            overflow-y: auto;
-        }
-
-        .history-item {
-            background: white;
-            padding: 12px 15px;
-            border-radius: 12px;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-left: 5px solid #667eea;
-        }
-
-        /* Features Grid */
-        .features {
-            margin-top: 40px;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 20px;
-        }
-
-        .feature-card {
-            background: linear-gradient(135deg, #f5f7ff, #fff);
-            padding: 20px;
-            text-align: center;
-            border-radius: 20px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        }
-
-        .feature-card span {
-            font-size: 2.5rem;
-            display: block;
-            margin-bottom: 10px;
-        }
-
         .footer {
             text-align: center;
             padding: 20px;
             background: #1e2a3a;
             color: white;
-            font-size: 0.9rem;
         }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .header h1 { font-size: 1.5rem; }
-            .mode-btn { padding: 8px 20px; font-size: 0.9rem; }
-            .result-card { flex-direction: column; text-align: center; gap: 10px; }
-        }
-
         .hidden {
             display: none;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 20px;
-            font-size: 1.2rem;
-            color: #667eea;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🧠 Human Emotion Detection System</h1>
-                <p>AI-powered Real-time Facial Expression Recognition</p>
+<div class="container">
+    <div class="header">
+        <h1>🧠 Human Emotion Detection System</h1>
+        <p>AI-powered Real-time Facial Expression Recognition</p>
         <div class="creator">🐺 Created by WINTER WOLF</div>
     </div>
 
-        <div class="main-content">
-            <!-- Mode Selection -->
-            <div class="mode-tabs">
-                <button class="mode-btn active" onclick="switchMode('live')">📹 Live Camera</button>
-                <button class="mode-btn" onclick="switchMode('upload')">🖼️ Upload Image</button>
-            </div>
+    <div class="main-content">
+        <div class="mode-tabs">
+            <button class="mode-btn active" onclick="switchMode('live')">📹 Live Camera</button>
+            <button class="mode-btn" onclick="switchMode('upload')">🖼️ Upload Image</button>
+        </div>
 
-            <!-- Live Camera Mode -->
-            <div id="live-mode" class="mode-panel">
-                <div class="video-card">
-                    <img id="video-feed" src="/video_feed" alt="Camera Feed">
-                    <div class="live-badge">🔴 LIVE</div>
-                </div>
-                <div style="text-align: center; margin-top: 15px;">
-                    <button class="action-btn" onclick="takeSnapshot()">📸 Capture Snapshot</button>
-                </div>
+        <!-- Live Camera Mode -->
+        <div id="live-mode" class="mode-panel active">
+            <div class="webcam-container">
+                <video id="local-video" autoplay playsinline muted></video>
             </div>
-
-            <!-- Upload Image Mode -->
-            <div id="upload-mode" class="mode-panel hidden">
-                <div class="upload-area" onclick="document.getElementById('imageInput').click()">
-                    <div class="upload-icon">📤</div>
-                    <p>Click to upload an image (JPG, PNG)</p>
-                    <p style="font-size: 0.8rem; margin-top: 8px;">Face should be clearly visible</p>
-                    <input type="file" id="imageInput" accept="image/jpeg,image/png" style="display: none;">
-                </div>
-                <div class="preview-container hidden" id="previewContainer">
-                    <img id="preview-img" alt="Preview">
-                    <button class="action-btn" onclick="detectFromUpload()">🔍 Detect Emotion</button>
-                </div>
-            </div>
-
-            <!-- Results Section -->
-            <div id="results-section" class="results-panel hidden">
-                <h3>📊 Detection Results</h3>
-                <div id="results-list"></div>
-            </div>
-
-            <!-- History Section -->
-            <div class="results-panel" style="margin-top: 20px;">
-                <h3>📜 Recent Detection History</h3>
-                <div id="history-list" class="history-list">
-                    <p style="text-align: center; color: #888;">No history yet. Start detecting!</p>
-                </div>
-            </div>
-
-            <!-- Features -->
-            <div class="features">
-                <div class="feature-card"><span>⚡</span> Real-time</div>
-                <div class="feature-card"><span>🎭</span> 7 Emotions</div>
-                <div class="feature-card"><span>🤖</span> Deep Learning</div>
-                <div class="feature-card"><span>📊</span> High Accuracy</div>
+            <div class="controls">
+                <button class="action-btn" id="start-cam-btn">▶️ Start Camera</button>
+                <button class="action-btn" id="stop-cam-btn" style="display: none;">⏹️ Stop Camera</button>
             </div>
         </div>
 
-        <div class="footer">
-            <p>© 2024 Human Emotion Detection | Made with ❤️ by Shailendra Meghwal</p>
-            <p>🎯 Supports: Happy, Sad, Angry, Surprise, Fear, Disgust, Neutral</p>
+        <!-- Upload Image Mode -->
+        <div id="upload-mode" class="mode-panel">
+            <div class="upload-area" onclick="document.getElementById('imageInput').click()">
+                <div>📤 Click to upload an image (JPG, PNG)</div>
+                <input type="file" id="imageInput" accept="image/jpeg,image/png" style="display: none;">
+            </div>
+            <div class="preview-container hidden">
+                <img id="preview-img" style="max-width:100%; border-radius:15px;">
+                <button class="action-btn" onclick="detectFromUpload()">🔍 Detect Emotion</button>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results-section" class="results-panel hidden">
+            <h3>📊 Detection Results</h3>
+            <div id="results-list"></div>
+        </div>
+
+        <!-- History Section -->
+        <div class="results-panel">
+            <h3>📜 Recent Detection History</h3>
+            <div id="history-list">No history yet.</div>
         </div>
     </div>
 
-    <script>
-        // DOM elements
-        const videoFeed = document.getElementById('video-feed');
-        const liveModeDiv = document.getElementById('live-mode');
-        const uploadModeDiv = document.getElementById('upload-mode');
-        const resultsSection = document.getElementById('results-section');
-        const resultsList = document.getElementById('results-list');
-        const historyList = document.getElementById('history-list');
-        const imageInput = document.getElementById('imageInput');
-        const previewContainer = document.getElementById('previewContainer');
-        const previewImg = document.getElementById('preview-img');
+    <div class="footer">
+        <p>Made with 🐺 by WINTER WOLF</p>
+    </div>
+</div>
 
-        let currentMode = 'live';
+<script>
+    let mediaStream = null;
+    let captureInterval = null;
+    let isProcessing = false;
 
-        // Switch between live and upload mode
-        function switchMode(mode) {
-            currentMode = mode;
-            // Update active button styling
-            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
-            if (mode === 'live') {
-                document.querySelector('.mode-btn:first-child').classList.add('active');
-                liveModeDiv.classList.remove('hidden');
-                uploadModeDiv.classList.add('hidden');
-                // Refresh video feed to ensure it's alive
-                if (videoFeed) videoFeed.src = '/video_feed?' + new Date().getTime();
-            } else {
-                document.querySelector('.mode-btn:last-child').classList.add('active');
-                liveModeDiv.classList.add('hidden');
-                uploadModeDiv.classList.remove('hidden');
+    const localVideo = document.getElementById('local-video');
+    const startBtn = document.getElementById('start-cam-btn');
+    const stopBtn = document.getElementById('stop-cam-btn');
+
+    async function startWebcam() {
+        try {
+            mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+            localVideo.srcObject = mediaStream;
+            localVideo.play();
+            startBtn.style.display = 'none';
+            stopBtn.style.display = 'inline-block';
+            startFrameCapture();
+        } catch (err) {
+            alert("Camera access denied or error: " + err.message);
+        }
+    }
+
+    function stopWebcam() {
+        if (captureInterval) clearInterval(captureInterval);
+        if (mediaStream) {
+            mediaStream.getTracks().forEach(track => track.stop());
+            localVideo.srcObject = null;
+        }
+        startBtn.style.display = 'inline-block';
+        stopBtn.style.display = 'none';
+    }
+
+    function startFrameCapture() {
+        if (captureInterval) clearInterval(captureInterval);
+        captureInterval = setInterval(() => {
+            if (localVideo.readyState === 4 && !isProcessing) {
+                captureAndDetect();
             }
-            // Clear results when switching
-            resultsSection.classList.add('hidden');
-        }
+        }, 500);
+    }
 
-        // Take snapshot from live video and detect emotion
-        function takeSnapshot() {
-            const canvas = document.createElement('canvas');
-            const img = videoFeed;
-            canvas.width = img.width;
-            canvas.height = img.height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            const imageData = canvas.toDataURL('image/jpeg');
-            detectEmotion(imageData);
-        }
+    async function captureAndDetect() {
+        if (isProcessing) return;
+        isProcessing = true;
+        const canvas = document.createElement('canvas');
+        canvas.width = localVideo.videoWidth;
+        canvas.height = localVideo.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(localVideo, 0, 0, canvas.width, canvas.height);
+        const imageData = canvas.toDataURL('image/jpeg');
+        await detectEmotion(imageData);
+        isProcessing = false;
+    }
 
-        // Handle image upload preview
-        imageInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                previewImg.src = event.target.result;
-                previewContainer.classList.remove('hidden');
-                // Clear previous results
-                resultsSection.classList.add('hidden');
-            };
-            reader.readAsDataURL(file);
-        });
-
-        // Detect from uploaded image
-        function detectFromUpload() {
-            if (!previewImg.src) return;
-            detectEmotion(previewImg.src);
-        }
-
-        // Common emotion detection API call
-        async function detectEmotion(imageData) {
-            showLoading();
-            try {
-                const response = await fetch('/detect', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ image: imageData })
-                });
-                const data = await response.json();
-                if (data.success && data.results && data.results.length > 0) {
-                    displayResults(data.results);
-                    // Save first result to history (backend already saves, but we refresh history)
-                    refreshHistory();
-                } else {
-                    showError('No face detected. Please try again with a clear face image.');
-                }
-            } catch (err) {
-                console.error(err);
-                showError('Detection failed. Check if backend is running.');
-            }
-        }
-
-        function showLoading() {
-            resultsSection.classList.remove('hidden');
-            resultsList.innerHTML = '<div class="loading">🤔 Analyzing face... Please wait</div>';
-        }
-
-        function showError(msg) {
-            resultsList.innerHTML = `<div style="color: red; text-align: center;">❌ ${msg}</div>`;
-        }
-
-        function displayResults(results) {
-            resultsList.innerHTML = '';
-            results.forEach(res => {
-                const confidencePercent = (res.confidence * 100).toFixed(1);
-                const card = document.createElement('div');
-                card.className = 'result-card';
-                card.innerHTML = `
-                    <div class="result-emotion">${res.emotion}</div>
-                    <div class="result-confidence">Confidence: ${confidencePercent}%</div>
-                `;
-                resultsList.appendChild(card);
+    async function detectEmotion(imageData) {
+        showLoading();
+        try {
+            const response = await fetch('/detect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: imageData })
             });
-        }
-
-        // Fetch history from backend
-        async function refreshHistory() {
-            try {
-                const response = await fetch('/history');
-                const data = await response.json();
-                if (data.success && data.history && data.history.length > 0) {
-                    historyList.innerHTML = '';
-                    // Show last 10 entries reversed (latest first)
-                    data.history.slice().reverse().slice(0, 10).forEach(item => {
-                        const time = new Date(item.timestamp).toLocaleTimeString();
-                        const div = document.createElement('div');
-                        div.className = 'history-item';
-                        div.innerHTML = `
-                            <span>${item.emotion}</span>
-                            <span>${(item.confidence * 100).toFixed(1)}%</span>
-                            <span style="color: #666;">${time}</span>
-                        `;
-                        historyList.appendChild(div);
-                    });
-                } else {
-                    historyList.innerHTML = '<p style="text-align: center; color: #888;">No history yet.</p>';
-                }
-            } catch (err) {
-                console.warn('Could not load history');
+            const data = await response.json();
+            if (data.success && data.results && data.results.length > 0) {
+                displayResults(data.results);
+                refreshHistory();
+            } else {
+                showError('No face detected. Try adjusting lighting or position.');
             }
+        } catch (err) {
+            showError('Detection failed. Check network.');
         }
+    }
 
-        // Auto refresh history every 5 seconds
-        setInterval(refreshHistory, 5000);
-        // Initial load
-        refreshHistory();
+    function displayResults(results) {
+        const resultsDiv = document.getElementById('results-list');
+        resultsDiv.innerHTML = '';
+        results.forEach(res => {
+            const card = document.createElement('div');
+            card.className = 'result-card';
+            card.innerHTML = `<div class="result-emotion">${res.emotion}</div><div>Confidence: ${(res.confidence * 100).toFixed(1)}%</div>`;
+            resultsDiv.appendChild(card);
+        });
+        document.getElementById('results-section').classList.remove('hidden');
+    }
 
-        // Make sure video feed reloads if broken
-        setInterval(() => {
-            if (currentMode === 'live' && videoFeed && videoFeed.complete === false) {
-                videoFeed.src = '/video_feed?' + new Date().getTime();
+    function showLoading() {
+        const resultsDiv = document.getElementById('results-list');
+        resultsDiv.innerHTML = '<div class="result-card">🤔 Analyzing...</div>';
+        document.getElementById('results-section').classList.remove('hidden');
+    }
+
+    function showError(msg) {
+        const resultsDiv = document.getElementById('results-list');
+        resultsDiv.innerHTML = `<div class="result-card" style="color:red;">❌ ${msg}</div>`;
+    }
+
+    function switchMode(mode) {
+        document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.mode-panel').forEach(panel => panel.classList.remove('active'));
+        if (mode === 'live') {
+            document.querySelector('.mode-btn:first-child').classList.add('active');
+            document.getElementById('live-mode').classList.add('active');
+            document.getElementById('upload-mode').classList.remove('active');
+            if (!mediaStream) startWebcam();
+        } else {
+            document.querySelector('.mode-btn:last-child').classList.add('active');
+            document.getElementById('upload-mode').classList.add('active');
+            document.getElementById('live-mode').classList.remove('active');
+            stopWebcam();
+        }
+        document.getElementById('results-section').classList.add('hidden');
+    }
+
+    document.getElementById('imageInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            document.getElementById('preview-img').src = event.target.result;
+            document.querySelector('.preview-container').classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+    });
+
+    async function detectFromUpload() {
+        const img = document.getElementById('preview-img');
+        if (!img.src) return;
+        await detectEmotion(img.src);
+    }
+
+    async function refreshHistory() {
+        try {
+            const response = await fetch('/history');
+            const data = await response.json();
+            if (data.success && data.history && data.history.length > 0) {
+                const historyDiv = document.getElementById('history-list');
+                historyDiv.innerHTML = '';
+                data.history.slice().reverse().slice(0, 10).forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'result-card';
+                    div.style.marginBottom = '10px';
+                    div.innerHTML = `<span>${item.emotion}</span> <span>${(item.confidence * 100).toFixed(1)}%</span> <small>${new Date(item.timestamp).toLocaleTimeString()}</small>`;
+                    historyDiv.appendChild(div);
+                });
             }
-        }, 10000);
-    </script>
+        } catch (err) {}
+    }
+
+    startBtn.onclick = startWebcam;
+    stopBtn.onclick = stopWebcam;
+    refreshHistory();
+    setInterval(refreshHistory, 5000);
+</script>
 </body>
 </html>
