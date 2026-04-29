@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>WINTER WOLF | Emotion Detector</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0f1e;
+            font-family: 'Segoe UI', monospace;
+            padding: 20px;
+            color: #fff;
+        }
+        .container {
+            max-width: 1300px;
+            margin: auto;
+            background: rgba(10,15,30,0.8);
+            border-radius: 24px;
+            backdrop-filter: blur(4px);
+            padding: 20px;
+        }
+        .mode-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .mode-btn {
+            background: #1e2a4a;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 40px;
+            color: #ccc;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .mode-btn.active {
+            background: #4f46e5;
+            color: white;
+            box-shadow: 0 0 12px #4f46e5;
+        }
+        .panel {
+            display: none;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .panel.active {
+            display: flex;
+        }
+        .video-container {
+            flex: 2;
+            min-width: 300px;
+            position: relative;
+            background: #000;
+            border-radius: 20px;
+            overflow: hidden;
+        }
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            padding-bottom: 75%;
+        }
+        video, canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        canvas { pointer-events: none; }
+        .side-panel {
+            flex: 1;
+            background: rgba(0,0,0,0.65);
+            backdrop-filter: blur(8px);
+            border-radius: 20px;
+            padding: 16px;
+            font-size: 13px;
+            font-family: monospace;
+        }
+        .side-panel h3 {
+            text-align: center;
+            margin-bottom: 15px;
+            color: #4fc3f7;
+        }
+        .emotion-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            gap: 8px;
+        }
+        .emotion-name {
+            width: 80px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .bar-container {
+            flex: 1;
+            background: #222;
+            border-radius: 12px;
+            height: 14px;
+            overflow: hidden;
+        }
+        .bar-fill {
+            height: 100%;
+            width: 0%;
+            transition: width 0.2s;
+        }
+        .percentage {
+            width: 45px;
+            text-align: right;
+        }
+        .controls {
+            text-align: center;
+            margin-top: 20px;
+        }
+        button {
+            background: #2d3a5e;
+            border: none;
+            padding: 8px 22px;
+            border-radius: 30px;
+            color: white;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .upload-area {
+            border: 2px dashed #4f46e5;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        .upload-area:hover {
+            background: rgba(79,70,229,0.1);
+        }
+        #preview {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 16px;
+            margin-top: 15px;
+            display: none;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 25px;
+            color: #aaa;
+        }
+        .result-card {
+            background: #1e2a4a;
+            margin: 8px 0;
+            padding: 10px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="mode-buttons">
+        <button class="mode-btn active" onclick="switchMode('live')">📷 Live Camera</button>
+        <button class="mode-btn" onclick="switchMode('upload')">🖼️ Upload Image</button>
+    </div>
+
+    <!-- Live Camera Panel -->
+    <div id="livePanel" class="panel active">
+        <div class="video-container">
+            <div class="video-wrapper">
+                <video id="video" autoplay muted playsinline></video>
+                <canvas id="overlayCanvas"></canvas>
+            </div>
+        </div>
+        <div class="side-panel">
+            <h3>🎭 Emotion Probabilities</h3>
+            <div id="emotionBars">Waiting for face...</div>
+        </div>
+    </div>
+
+    <!-- Upload Image Panel -->
+    <div id="uploadPanel" class="panel">
+        <div style="flex:1;">
+            <div class="upload-area" onclick="document.getElementById('imageInput').click()">
+                📤 Click here to upload image (JPG, PNG)
+                <input type="file" id="imageInput" accept="image/jpeg,image/png" style="display:none">
+            </div>
+            <img id="preview" alt="Preview">
+            <div style="text-align:center; margin-top:15px;">
+                <button id="detectUploadBtn">🔍 Detect Emotion</button>
+            </div>
+        </div>
+        <div class="side-panel">
+            <h3>🎭 Emotion Probabilities</h3>
+            <div id="uploadEmotionBars">Upload an image first</div>
+        </div>
+    </div>
+
+    <div id="results" style="margin-top:20px; background:#111c; padding:15px; border-radius:20px;"></div>
+    <div id="historyPanel" style="margin-top:15px; background:#111c; padding:15px; border-radius:20px;"></div>
+    <div class="footer">🐺 WINTER WOLF | DeepFace Emotion Detector</div>
+</div>
+
+<script>
+    let stream = null, interval = null, isProcessing = false;
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('overlayCanvas');
+    const ctx = canvas.getContext('2d');
+    const sidePanelDiv = document.getElementById('emotionBars');
+    const uploadSidePanelDiv = document.getElementById('uploadEmotionBars');
+    const resultsDiv = document.getElementById('results');
+    const historyDiv = document.getElementById('historyPanel');
+
+    // Add buttons inside livePanel
+    const ctrlDiv = document.createElement('div');
+    ctrlDiv.className = 'controls';
+    document.getElementById('livePanel').appendChild(ctrlDiv);
+    const startBtn = document.createElement('button');
+    startBtn.textContent = '▶ Start Camera';
+    const stopBtn = document.createElement('button');
+    stopBtn.textContent = '⏹ Stop Camera';
+    stopBtn.style.display = 'none';
+    ctrlDiv.appendChild(startBtn);
+    ctrlDiv.appendChild(stopBtn);
+
+    function getEmotionColor(emo) {
+        const c = { happy:'#00e676', sad:'#42a5f5', angry:'#ef5350', fear:'#ab47bc', surprise:'#4fc3f7', disgust:'#26a69a', neutral:'#78909c' };
+        return c[emo] || '#aaa';
+    }
+
+    async function startWebcam() {
+        if (stream) stopWebcam();
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+            await new Promise(resolve => {
+                video.onloadedmetadata = () => {
+                    video.play();
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    resolve();
+                };
+            });
+            startBtn.style.display = 'none';
+            stopBtn.style.display = 'inline-block';
+            if (interval) clearInterval(interval);
+            interval = setInterval(captureAndSend, 1000);
+        } catch(err) { alert("Camera error: " + err.message); }
+    }
+
+    function stopWebcam() {
+        if(interval) clearInterval(interval);
+        if(stream) { stream.getTracks().forEach(t => t.stop()); video.srcObject = null; }
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        startBtn.style.display = 'inline-block';
+        stopBtn.style.display = 'none';
+        isProcessing = false;
+    }
+
+    async function captureAndSend() {
+        if (isProcessing || !video.srcObject || video.readyState !== 4 || video.videoWidth === 0) return;
+        isProcessing = true;
+        const cap = document.createElement('canvas');
+        cap.width = video.videoWidth;
+        cap.height = video.videoHeight;
+        cap.getContext('2d').drawImage(video, 0, 0);
+        const imageData = cap.toDataURL('image/jpeg');
+        await sendToBackend(imageData, 'live');
+        isProcessing = false;
+    }
+
+    async function sendToBackend(imageData, source) {
+        try {
+            const res = await fetch('/detect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: imageData })
+            });
+            const data = await res.json();
+            if (data.success && data.results.length) {
+                if (source === 'live') {
+                    drawBoxes(data.results);
+                    updateSidebar(data.results[0].emotions, data.results[0].dominant);
+                } else {
+                    updateUploadSidebar(data.results[0].emotions);
+                }
+                updateResults(data.results);
+            } else {
+                if (source === 'live') {
+                    ctx.clearRect(0,0,canvas.width,canvas.height);
+                    sidePanelDiv.innerHTML = '<div>❌ No face detected</div>';
+                } else {
+                    uploadSidePanelDiv.innerHTML = '<div>❌ No face detected</div>';
+                }
+            }
+            fetchHistory();
+        } catch(e) { console.error(e); }
+    }
+
+    function drawBoxes(results) {
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        for(let r of results) {
+            const [x,y,w,h] = r.bbox;
+            const col = `rgb(${r.color[0]}, ${r.color[1]}, ${r.color[2]})`;
+            ctx.strokeStyle = col;
+            ctx.lineWidth = 3;
+            ctx.strokeRect(x, y, w, h);
+            ctx.fillStyle = col;
+            ctx.font = "bold 16px monospace";
+            const label = r.dominant.toUpperCase();
+            const tw = ctx.measureText(label).width;
+            ctx.fillRect(x-2, y-28, tw+20, 26);
+            ctx.fillStyle = '#000';
+            ctx.fillText(label, x+5, y-8);
+        }
+    }
+
+    function updateSidebar(emotions, dominant) {
+        if (!emotions) return;
+        const sorted = Object.entries(emotions).sort((a,b)=>b[1]-a[1]);
+        let html = '';
+        for(let [emo, score] of sorted) {
+            html += `<div class="emotion-row">
+                <div class="emotion-name" style="color:${emo===dominant?'#fff':'#aaa'}">${emo}</div>
+                <div class="bar-container"><div class="bar-fill" style="width:${score.toFixed(1)}%;background:${getEmotionColor(emo)}"></div></div>
+                <div class="percentage">${score.toFixed(1)}%</div>
+            </div>`;
+        }
+        sidePanelDiv.innerHTML = html;
+    }
+
+    function updateUploadSidebar(emotions) {
+        if (!emotions) return;
+        const sorted = Object.entries(emotions).sort((a,b)=>b[1]-a[1]);
+        let html = '';
+        for(let [emo, score] of sorted) {
+            html += `<div class="emotion-row">
+                <div class="emotion-name">${emo}</div>
+                <div class="bar-container"><div class="bar-fill" style="width:${score.toFixed(1)}%;background:${getEmotionColor(emo)}"></div></div>
+                <div class="percentage">${score.toFixed(1)}%</div>
+            </div>`;
+        }
+        uploadSidePanelDiv.innerHTML = html;
+    }
+
+    function updateResults(results) {
+        resultsDiv.innerHTML = results.map(r => `<div class="result-card">
+            <span>😊 ${r.dominant.toUpperCase()}</span>
+            <span>${r.emotions[r.dominant.charAt(0).toUpperCase()+r.dominant.slice(1)].toFixed(1)}%</span>
+        </div>`).join('');
+    }
+
+    async function fetchHistory() {
+        try {
+            const res = await fetch('/history');
+            const data = await res.json();
+            if (data.success && data.history && data.history.length) {
+                historyDiv.innerHTML = '<h3>📜 Recent History</h3>' + data.history.slice(-10).reverse().map(h => `
+                    <div class="result-card">
+                        <span>${h.emotion}</span>
+                        <span>${(h.confidence*100).toFixed(1)}%</span>
+                        <small>${new Date(h.timestamp).toLocaleTimeString()}</small>
+                    </div>
+                `).join('');
+            } else {
+                historyDiv.innerHTML = '<h3>📜 History</h3><div>No history yet</div>';
+            }
+        } catch(e) {}
+    }
+
+    // Upload mode
+    const fileInput = document.getElementById('imageInput');
+    const preview = document.getElementById('preview');
+    const detectUpload = document.getElementById('detectUploadBtn');
+
+    fileInput.onchange = (e) => {
+        const file = e.target.files[0];
+        if(file) {
+            const reader = new FileReader();
+            reader.onload = ev => {
+                preview.src = ev.target.result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    detectUpload.onclick = async () => {
+        if(!preview.src) {
+            alert("Please select an image first");
+            return;
+        }
+        resultsDiv.innerHTML = '<div class="result-card">Analyzing...</div>';
+        uploadSidePanelDiv.innerHTML = '<div>Analyzing...</div>';
+        await sendToBackend(preview.src, 'upload');
+    };
+
+    function switchMode(mode) {
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        if(mode === 'live') {
+            document.querySelector('.mode-btn:first-child').classList.add('active');
+            document.getElementById('livePanel').classList.add('active');
+            if(!stream) startWebcam();
+        } else {
+            document.querySelector('.mode-btn:last-child').classList.add('active');
+            document.getElementById('uploadPanel').classList.add('active');
+            stopWebcam();
+        }
+        resultsDiv.innerHTML = '';
+    }
+
+    startBtn.onclick = startWebcam;
+    stopBtn.onclick = stopWebcam;
+    fetchHistory();
+    setInterval(fetchHistory, 5000);
+</script>
+</body>
+</html>
